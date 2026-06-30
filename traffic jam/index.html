@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Jam Restaurant - Smart Ordering</title>
+    <!-- Meta tags for SEO & Mobile App look -->
+    <meta name="description" content="Browse our menu, place orders directly from your table, and track preparation in real-time. Fast & Premium dining experience.">
+    <meta name="theme-color" content="#FF6B00">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Ionicons CDN for beautiful premium outline/solid icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="customer.css">
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <!-- 1. Splash Screen -->
+    <div id="splashScreen" class="splash-screen">
+        <div class="splash-logo-container">
+            <div class="splash-logo">
+                <ion-icon name="restaurant" style="font-size: 4rem; color: #FF6B00;"></ion-icon>
+                TRAFFIC JAM<span>RESTAURANT</span>
+            </div>
+            <div class="splash-loader"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- 2. Glassmorphism Header -->
+    <header>
+        <div class="container header-content">
+            <a href="#" class="brand" onclick="navigateTo('home')">
+                <ion-icon name="car-sport" style="color: #FF6B00; font-size: 1.6rem;"></ion-icon>
+                Traffic Jam<span>.</span>
+            </a>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span id="headerTableBadge" class="table-badge" style="display: none;">Table 00</span>
+                <button id="favoritesBtn" class="theme-toggle-btn" onclick="navigateTo('favorites')" title="My Favorites">
+                    <ion-icon name="heart-outline" id="headerFavoritesIcon" style="color: var(--primary);"></ion-icon>
+                </button>
+                <button id="themeToggleBtn" class="theme-toggle-btn">
+                    <ion-icon name="moon-outline" id="themeIcon"></ion-icon>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 3. SPA Main View Container -->
+    <main class="container">
+        
+        <!-- HOME VIEW -->
+        <div id="homeView" class="view active">
+            <!-- Hero banner / Offers Carousel -->
+            <div class="hero-carousel">
+                <div class="carousel-inner" id="carouselInner">
+                    <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=700&auto=format&fit=crop&q=60');">
+                        <div class="carousel-text">
+                            <span class="carousel-tag">Flat 20% OFF</span>
+                            <h3 class="carousel-title">Welcome to Traffic Jam</h3>
+                            <p class="carousel-desc">Use code TJ20 on your first table order today!</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=700&auto=format&fit=crop&q=60');">
+                        <div class="carousel-text">
+                            <span class="carousel-tag">Chef's Special</span>
+                            <h3 class="carousel-title">Double-Crust Pizza</h3>
+                            <p class="carousel-desc">Loaded with spicy toppings & extra premium cheese.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=700&auto=format&fit=crop&q=60');">
+                        <div class="carousel-text">
+                            <span class="carousel-tag">Signature Dessert</span>
+                            <h3 class="carousel-title">Sizzling Brownie</h3>
+                            <p class="carousel-desc">Warm chocolate fudge brownie with classic vanilla scoop.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="carousel-dots" id="carouselDots">
+                    <span class="dot active" onclick="moveCarousel(0)"></span>
+                    <span class="dot" onclick="moveCarousel(1)"></span>
+                    <span class="dot" onclick="moveCarousel(2)"></span>
+                </div>
+            </div>
+
+            <!-- Instant Search -->
+            <div class="search-container">
+                <ion-icon name="search-outline" class="search-icon"></ion-icon>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search delicious food...">
+            </div>
+
+            <!-- Categories Horizontal Scroll -->
+            <div class="section-header">
+                <h2 class="section-title">Browse Categories</h2>
+            </div>
+            <div class="categories-scroll" id="categoriesContainer">
+                <!-- Skeletons while loading -->
+                <div class="category-card skeleton" style="width: 75px; height: 90px; border-radius: 18px;"></div>
+                <div class="category-card skeleton" style="width: 75px; height: 90px; border-radius: 18px;"></div>
+                <div class="category-card skeleton" style="width: 75px; height: 90px; border-radius: 18px;"></div>
+                <div class="category-card skeleton" style="width: 75px; height: 90px; border-radius: 18px;"></div>
+                <div class="category-card skeleton" style="width: 75px; height: 90px; border-radius: 18px;"></div>
+            </div>
+
+            <!-- Today's Special / Chef Specials (Horizontal Scroll) -->
+            <div id="specialsSection" style="margin-bottom: 25px;">
+                <div class="section-header">
+                    <h2 class="section-title">Chef's Special</h2>
+                </div>
+                <div class="categories-scroll" id="specialsContainer" style="gap: 15px; padding-bottom: 10px;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Recommended Section (Horizontal Scroll) -->
+            <div id="recommendedSection" style="margin-bottom: 25px;">
+                <div class="section-header">
+                    <h2 class="section-title">Recommended for You</h2>
+                </div>
+                <div class="categories-scroll" id="recommendedContainer" style="gap: 15px; padding-bottom: 10px;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Today's Special / Popular Foods -->
+            <div class="section-header">
+                <h2 class="section-title" id="foodSectionTitle">Popular Menu</h2>
+                <a href="#" class="view-all" id="resetCategoryFilterBtn" style="display: none;" onclick="clearCategoryFilter()">Show All</a>
+            </div>
+
+            <!-- Food Cards Grid -->
+            <div class="food-grid" id="foodsContainer">
+                <!-- Skeletons while loading -->
+                <div class="food-card skeleton" style="height: 220px; border-radius: 24px;"></div>
+                <div class="food-card skeleton" style="height: 220px; border-radius: 24px;"></div>
+                <div class="food-card skeleton" style="height: 220px; border-radius: 24px;"></div>
+                <div class="food-card skeleton" style="height: 220px; border-radius: 24px;"></div>
+            </div>
+        </div>
+
+        <!-- CATEGORIES VIEW -->
+        <div id="categoriesView" class="view">
+            <div class="section-header">
+                <h2 class="section-title">All Categories</h2>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;" id="allCategoriesGrid">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- FAVORITES VIEW -->
+        <div id="favoritesView" class="view">
+            <div class="section-header">
+                <h2 class="section-title">My Favorites</h2>
+            </div>
+            <div class="food-grid" id="favoritesContainer">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- CART VIEW -->
+        <div id="cartView" class="view">
+            <h2 class="section-title" style="margin-bottom: 20px;">My Cart</h2>
+            <div id="cartContent">
+                <!-- Items, coupon, totals - Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- CHECKOUT VIEW -->
+        <div id="checkoutView" class="view">
+            <h2 class="section-title" style="margin-bottom: 20px;">Confirm Details</h2>
+            <form id="checkoutForm" onsubmit="handlePlaceOrder(event)">
+                <div class="form-group">
+                    <label class="form-label" for="customerName">Your Name</label>
+                    <input type="text" id="customerName" class="form-input" placeholder="Enter your name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="customerPhone">Phone Number (Optional)</label>
+                    <input type="tel" id="customerPhone" class="form-input" placeholder="For order receipt / invoice (optional)">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Dining Option</label>
+                    <div class="toggle-group" id="orderTypeToggle">
+                        <div class="toggle-option active" data-type="dining" onclick="setOrderType('dining')">Dine-in</div>
+                        <div class="toggle-option" data-type="takeaway" onclick="setOrderType('takeaway')">Takeaway</div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="tableGroup">
+                    <label class="form-label" for="tableNumber">Table Number</label>
+                    <input type="text" id="tableNumber" class="form-input" placeholder="e.g. 05 or 12" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="specialInstructions">Special Instructions (Optional)</label>
+                    <textarea id="specialInstructions" class="form-textarea" placeholder="e.g. Make it extra spicy, No onions, etc."></textarea>
+                </div>
+
+                <div class="bill-details" style="background-color: var(--bg-gray); margin-bottom: 25px;">
+                    <div class="bill-row">
+                        <span>Items Subtotal</span>
+                        <span id="checkoutSubtotal">₹0.00</span>
+                    </div>
+                    <div class="bill-row" id="checkoutDiscountRow" style="display: none;">
+                        <span>Discount Applied</span>
+                        <span id="checkoutDiscount" style="color: var(--success);">-₹0.00</span>
+                    </div>
+                    <div class="bill-row">
+                        <span>GST (5%)</span>
+                        <span id="checkoutGst">₹0.00</span>
+                    </div>
+                    <div class="bill-row grand-total">
+                        <span>Grand Total</span>
+                        <span id="checkoutGrandTotal">₹0.00</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%;">
+                    <ion-icon name="checkmark-circle"></ion-icon>
+                    Place Order (₹<span id="checkoutBtnTotal">0</span>)
+                </button>
+            </form>
+        </div>
+
+        <!-- ORDER SUCCESS VIEW -->
+        <div id="orderSuccessView" class="view">
+            <div class="success-screen">
+                <div class="success-icon-anim">
+                    <ion-icon name="checkmark-circle"></ion-icon>
+                </div>
+                <h2 class="success-title">Order Placed Successfully!</h2>
+                <p class="success-desc">Your order has been sent directly to the receptionist dashboard. Sit back and relax!</p>
+                
+                <div class="order-info-card">
+                    <div class="order-info-row">
+                        <span class="order-info-label">Order ID:</span>
+                        <span class="order-info-val" id="successOrderId">---</span>
+                    </div>
+                    <div class="order-info-row">
+                        <span class="order-info-label">Table:</span>
+                        <span class="order-info-val" id="successTable">---</span>
+                    </div>
+                    <div class="order-info-row">
+                        <span class="order-info-label">Total Amount:</span>
+                        <span class="order-info-val" id="successTotal">₹0.00</span>
+                    </div>
+                    <div class="order-info-row">
+                        <span class="order-info-label">Estimated Time:</span>
+                        <span class="order-info-val" id="successEstTime" style="color: var(--primary);">~15-20 Mins</span>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="trackActiveOrder()" style="width: 100%; margin-bottom: 12px;">
+                    <ion-icon name="map-outline"></ion-icon>
+                    Track Order Live
+                </button>
+                <button class="btn-primary" style="background-color: var(--bg-gray); color: var(--text-dark); box-shadow: none; width: 100%;" onclick="navigateTo('home')">
+                    Back to Home
+                </button>
+            </div>
+        </div>
+
+        <!-- ORDER TRACKING VIEW -->
+        <div id="orderTrackingView" class="view">
+            <h2 class="section-title" style="margin-bottom: 10px;">Track Order</h2>
+            <div class="order-info-card" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; font-size: 1rem;">Order Status</span>
+                    <span id="trackStatusBadge" class="history-status-badge status-received">Received</span>
+                </div>
+                <div class="order-info-row" style="margin-top: 12px;">
+                    <span class="order-info-label">Order ID:</span>
+                    <span class="order-info-val" id="trackOrderId">---</span>
+                </div>
+                <div class="order-info-row">
+                    <span class="order-info-label">Table Number:</span>
+                    <span class="order-info-val" id="trackTableNumber">---</span>
+                </div>
+                <div class="order-info-row">
+                    <span class="order-info-label">Ordered Items:</span>
+                    <span class="order-info-val" id="trackItems">---</span>
+                </div>
+            </div>
+
+            <!-- Live status timeline -->
+            <div class="timeline">
+                <div class="timeline-item" id="step-received">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-status">Order Received</span>
+                        <span class="timeline-time">Pending verification</span>
+                    </div>
+                </div>
+                <div class="timeline-item" id="step-preparing">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-status">Preparing in Kitchen</span>
+                        <span class="timeline-time">Chef is cooking your dish</span>
+                    </div>
+                </div>
+                <div class="timeline-item" id="step-ready">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-status">Ready to Serve</span>
+                        <span class="timeline-time">Order is packaged / plated</span>
+                    </div>
+                </div>
+                <div class="timeline-item" id="step-delivered">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-status">Delivered</span>
+                        <span class="timeline-time">Delivered to your table</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="feedbackFormContainer" style="display: none; margin-top: 30px;">
+                <h3 class="section-title" style="margin-bottom: 12px; font-size: 1.05rem;">We'd Love Your Feedback!</h3>
+                <div style="background-color: var(--bg-gray); padding: 20px; border-radius: var(--radius-md);">
+                    <div style="display: flex; justify-content: center; gap: 15px; font-size: 2.2rem; color: #ccc; margin-bottom: 15px;" id="feedbackStars">
+                        <ion-icon name="star-outline" class="feedback-star" data-rating="1" onclick="setFeedbackRating(1)"></ion-icon>
+                        <ion-icon name="star-outline" class="feedback-star" data-rating="2" onclick="setFeedbackRating(2)"></ion-icon>
+                        <ion-icon name="star-outline" class="feedback-star" data-rating="3" onclick="setFeedbackRating(3)"></ion-icon>
+                        <ion-icon name="star-outline" class="feedback-star" data-rating="4" onclick="setFeedbackRating(4)"></ion-icon>
+                        <ion-icon name="star-outline" class="feedback-star" data-rating="5" onclick="setFeedbackRating(5)"></ion-icon>
+                    </div>
+                    <textarea id="feedbackReview" class="form-textarea" placeholder="Write a short review (optional)"></textarea>
+                    <button class="btn-primary" style="width: 100%; margin-top: 15px;" onclick="submitFeedback()">
+                        Submit Feedback
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTORY VIEW -->
+        <div id="historyView" class="view">
+            <h2 class="section-title" style="margin-bottom: 20px;">Order History</h2>
+            <div id="historyContainer">
+                <!-- Loaded dynamically from localStorage -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 4. Product Details Drawer (Bottom Sheet) -->
+    <div id="sheetOverlay" class="sheet-overlay" onclick="closeProductDrawer()"></div>
+    <div id="productDrawer" class="bottom-sheet">
+        <div class="sheet-header"></div>
+        <div class="sheet-content" id="productDrawerContent">
+            <!-- Content will be injected dynamically -->
+        </div>
+    </div>
+
+    <!-- 5. Floating Cart Badge Trigger -->
+    <button id="floatingCartBtn" class="floating-cart-btn" onclick="navigateTo('cart')">
+        <ion-icon name="cart-outline" style="font-size: 1.3rem;"></ion-icon>
+        Cart &bull; <span id="floatCartCount">0</span> Items (₹<span id="floatCartTotal">0</span>)
+    </button>
+
+    <!-- 6. Bottom Sticky Navigation Bar -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" id="navHome" onclick="navigateTo('home')">
+            <ion-icon name="home-outline" class="nav-icon"></ion-icon>
+            <span>Home</span>
+        </div>
+        <div class="nav-item" id="navCategories" onclick="navigateTo('categories')">
+            <ion-icon name="grid-outline" class="nav-icon"></ion-icon>
+            <span>Categories</span>
+        </div>
+        <div class="nav-item" id="navCart" onclick="navigateTo('cart')">
+            <ion-icon name="cart-outline" class="nav-icon"></ion-icon>
+            <span>Cart</span>
+            <span id="bottomNavCartCount" class="cart-badge" style="display: none;">0</span>
+        </div>
+        <div class="nav-item" id="navHistory" onclick="navigateTo('history')">
+            <ion-icon name="time-outline" class="nav-icon"></ion-icon>
+            <span>History</span>
+        </div>
+    </nav>
+
+    <!-- Customer Invoice Modal -->
+    <div id="customerInvoiceModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Receipt/Invoice</h3>
+                <button class="close-btn" onclick="closeCustomerInvoiceModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="customerInvoiceBody" style="max-height: 400px; overflow-y: auto; padding: 15px 5px;">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="modal-footer" style="padding-top: 15px;">
+                <button class="btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 6px; flex-grow: 1;" onclick="window.print()">
+                    <ion-icon name="print-outline"></ion-icon> Print Invoice
+                </button>
+                <button class="btn-secondary" onclick="closeCustomerInvoiceModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts configuration and frontend logic -->
+    <script src="config.js"></script>
+    <script src="customer.js"></script>
+</body>
+</html>

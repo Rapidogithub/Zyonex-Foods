@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reception Dashboard - Traffic Jam</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Ionicons CDN -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <!-- Chart.js CDN for Analytics Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="dashboard.css">
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <!-- 1. Secure Admin Login Overlay -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-logo">
+                <ion-icon name="car-sport" style="color: #FF6B00; font-size: 3rem;"></ion-icon>
+                Traffic Jam<span>Dashboard</span>
+            </div>
+            <p style="color: #bbb; margin-bottom: 25px; font-size: 0.9rem;">Sign in with your restaurant account credentials to manage orders & menu.</p>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <input type="email" id="loginEmail" class="login-input" placeholder="Admin Email" required>
+                <input type="password" id="loginPassword" class="login-input" placeholder="Password" required>
+                <button type="submit" class="login-btn" id="loginSubmitBtn">Log In</button>
+            </form>
+            <!-- Easy Demo Entry Badge for quick evaluation -->
+            <div style="margin-top: 25px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+                <p style="font-size: 0.75rem; color: #888;">No database connection? Enter offline mode:</p>
+                <button onclick="enterOfflineDashboard()" style="background: none; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; margin-top: 8px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.borderColor='#FF6B00'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)'">
+                    Enter Offline Preview Panel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation Drawer Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- 2. Dashboard Left Sidebar Navigation -->
+    <aside id="dashboardSidebar">
+        <div class="sidebar-brand">
+            <ion-icon name="car-sport" style="color: #FF6B00; font-size: 1.8rem;"></ion-icon>
+            Traffic Jam<span>.</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item active" id="menu-live-orders">
+                <a href="#" onclick="switchTab('live-orders')">
+                    <ion-icon name="restaurant-outline" style="font-size: 1.25rem;"></ion-icon>
+                    <span>Live Orders</span>
+                    <span id="liveOrderCountBadge" class="column-count" style="background-color: var(--primary); color: white; display: none; width: 20px; height: 20px; font-size: 0.7rem; margin-left: auto;">0</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-analytics">
+                <a href="#" onclick="switchTab('analytics')">
+                    <ion-icon name="bar-chart-outline" style="font-size: 1.25rem;"></ion-icon>
+                    <span>Analytics</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-menu-mgmt">
+                <a href="#" onclick="switchTab('menu-mgmt')">
+                    <ion-icon name="book-outline" style="font-size: 1.25rem;"></ion-icon>
+                    <span>Menu Editor</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-feedback">
+                <a href="#" onclick="switchTab('feedback')">
+                    <ion-icon name="chatbox-outline" style="font-size: 1.25rem;"></ion-icon>
+                    <span>Feedbacks</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-customers">
+                <a href="#" onclick="switchTab('customers')">
+                    <ion-icon name="people-outline" style="font-size: 1.25rem;"></ion-icon>
+                    <span>Customers</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-reports">
+                <a href="#" onclick="switchTab('reports')">
+                    <ion-icon name="document-text-outline" style="font-size: 1.25rem;"></ion-icon>
+                    <span>Reports</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-settings">
+                <a href="#" onclick="switchTab('settings')">
+                    <ion-icon name="settings-outline" style="font-size: 1.25rem;"></ion-icon>
+                    <span>Settings</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="handleLogout()">
+                <ion-icon name="log-out-outline"></ion-icon> Log Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- 3. Right Pane workspace container -->
+    <main>
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <ion-icon name="menu-outline" class="sidebar-toggle" onclick="toggleSidebar()"></ion-icon>
+                <h1 class="dashboard-title" id="pageTitle">Live Orders</h1>
+            </div>
+            
+            <div class="dashboard-actions">
+                <div id="offlineIndicator" style="display: none; align-items: center; gap: 6px; background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-size: 0.75rem; font-weight: 600; padding: 6px 12px; border-radius: 6px;">
+                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #dc2626;"></span> Offline Mode
+                </div>
+                <div id="realtimeIndicator" style="display: flex; align-items: center; gap: 6px; background-color: #dcfce7; color: #166534; border: 1px solid #86efac; font-size: 0.75rem; font-weight: 600; padding: 6px 12px; border-radius: 6px;">
+                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #22c55e; animation: pulse 1.5s infinite;"></span> Live Connected
+                </div>
+                <button class="btn-primary" style="background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="refreshDashboardData()">
+                    <ion-icon name="refresh-outline"></ion-icon> Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- A. LIVE ORDERS TAB -->
+        <section id="tab-live-orders" class="tab-content active">
+            <div class="order-board">
+                <!-- 1. Received Queue Column -->
+                <div class="board-column" id="col-received">
+                    <div class="column-header">
+                        <span class="column-title"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #0284c7;"></span> Received</span>
+                        <span class="column-count" id="count-received">0</span>
+                    </div>
+                    <div class="order-cards-list" id="list-received">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- 2. Preparing Queue Column -->
+                <div class="board-column" id="col-preparing">
+                    <div class="column-header">
+                        <span class="column-title"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: var(--warning);"></span> Preparing</span>
+                        <span class="column-count" id="count-preparing">0</span>
+                    </div>
+                    <div class="order-cards-list" id="list-preparing">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- 3. Ready Queue Column -->
+                <div class="board-column" id="col-ready">
+                    <div class="column-header">
+                        <span class="column-title"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: var(--success);"></span> Ready to Serve</span>
+                        <span class="column-count" id="count-ready">0</span>
+                    </div>
+                    <div class="order-cards-list" id="list-ready">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- 4. Completed / Delivered Queue Column -->
+                <div class="board-column" id="col-delivered">
+                    <div class="column-header">
+                        <span class="column-title"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #4a4a58;"></span> Delivered</span>
+                        <span class="column-count" id="count-delivered">0</span>
+                    </div>
+                    <div class="order-cards-list" id="list-delivered">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- B. ANALYTICS TAB -->
+        <section id="tab-analytics" class="tab-content">
+            <!-- Stats overview layout -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: #e0f2fe; color: #0284c7;"><ion-icon name="today-outline"></ion-icon></div>
+                    <div class="stat-details">
+                        <span class="stat-label">Today's Sales</span>
+                        <span class="stat-value" id="analyticDailyRevenue">₹0.00</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: #fef3c7; color: #d97706;"><ion-icon name="calendar-outline"></ion-icon></div>
+                    <div class="stat-details">
+                        <span class="stat-label">Weekly Sales</span>
+                        <span class="stat-value" id="analyticWeeklyRevenue">₹0.00</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: #dcfce7; color: #15803d;"><ion-icon name="analytics-outline"></ion-icon></div>
+                    <div class="stat-details">
+                        <span class="stat-label">Monthly Sales</span>
+                        <span class="stat-value" id="analyticMonthlyRevenue">₹0.00</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);"><ion-icon name="cash-outline"></ion-icon></div>
+                    <div class="stat-details">
+                        <span class="stat-label">Total Sales</span>
+                        <span class="stat-value" id="analyticRevenue">₹0.00</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><ion-icon name="cart-outline"></ion-icon></div>
+                    <div class="stat-details">
+                        <span class="stat-label">Total Orders</span>
+                        <span class="stat-value" id="analyticOrders">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><ion-icon name="star-outline"></ion-icon></div>
+                    <div class="stat-details">
+                        <span class="stat-label">Avg Rating</span>
+                        <span class="stat-value" id="analyticRating">0.0 / 5</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics charts row -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3 class="chart-title">Revenue Trends</h3>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="revenueTrendChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Orders by Status</h3>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- C. MENU MANAGEMENT TAB -->
+        <section id="tab-menu-mgmt" class="tab-content">
+            <div class="table-card">
+                <div class="table-header-row">
+                    <div class="search-bar">
+                        <ion-icon name="search-outline"></ion-icon>
+                        <input type="text" id="menuSearchInput" oninput="filterMenuTable()" placeholder="Search menu...">
+                    </div>
+                    <button class="btn-primary" onclick="openFoodModal()">
+                        <ion-icon name="add-circle-outline"></ion-icon> Add Food Item
+                    </button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Image</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Special</th>
+                                <th>Popular</th>
+                                <th>Recommended</th>
+                                <th>In Stock</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="menuTableBody">
+                            <!-- Populated dynamically -->
+                            <tr>
+                                <td colspan="8" style="text-align: center;">Loading menu items...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- D. FEEDBACKS TAB -->
+        <section id="tab-feedback" class="tab-content">
+            <div class="table-card">
+                <div class="table-header-row">
+                    <h3 class="chart-title" style="margin-bottom: 0;">Customer Reviews</h3>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Rating</th>
+                                <th>Review / Comments</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feedbackTableBody">
+                            <tr>
+                                <td colspan="4" style="text-align: center;">Loading feedbacks...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- F. CUSTOMERS TAB -->
+        <section id="tab-customers" class="tab-content">
+            <div class="table-card">
+                <div class="table-header-row">
+                    <h3 class="chart-title" style="margin-bottom: 0;">Customer Database</h3>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>Phone Number</th>
+                                <th>Total Orders Placed</th>
+                                <th>Total Amount Spent</th>
+                                <th>Last Order Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center;">Loading customers data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- G. REPORTS TAB -->
+        <section id="tab-reports" class="tab-content">
+            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 25px;">
+                <div class="stat-card" onclick="generateReport('sales')" style="cursor: pointer; border: 1px solid var(--border-color);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                    <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);"><ion-icon name="trending-up-outline"></ion-icon></div>
+                    <div class="stat-details">
+                        <span class="stat-label">Sales Analysis</span>
+                        <span class="stat-value" style="font-size: 1rem; font-weight: 600;">Category Wise Sales</span>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="generateReport('items')" style="cursor: pointer; border: 1px solid var(--border-color);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                    <div class="stat-icon" style="background-color: #dcfce7; color: #15803d;"><ion-icon name="fast-food-outline"></ion-icon></div>
+                    <div class="stat-details">
+                        <span class="stat-label">Dish Performance</span>
+                        <span class="stat-value" style="font-size: 1rem; font-weight: 600;">Top Selling Dishes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-card" id="reportResultContainer" style="display: none;">
+                <div class="table-header-row" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 class="chart-title" id="reportTitle" style="margin-bottom: 0;">Sales Report</h3>
+                    <button class="btn-primary" style="background-color: var(--success); font-size: 0.8rem; padding: 8px 16px;" onclick="exportReportToCSV()">
+                        <ion-icon name="download-outline"></ion-icon> Export CSV
+                    </button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead id="reportTableHead">
+                            <!-- Dynamic headers -->
+                        </thead>
+                        <tbody id="reportTableBody">
+                            <!-- Dynamic rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- E. SETTINGS TAB -->
+        <section id="tab-settings" class="tab-content">
+            <div class="chart-card" style="max-width: 600px;">
+                <h3 class="chart-title">Dashboard Settings</h3>
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;">Audible Notification Alerts</h4>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">Play chime notification when a new customer order is received</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="settingsSoundAlerts" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;">Auto-Refresh (Poller)</h4>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">Backup polling interval when realtime subscription gets throttled</p>
+                        </div>
+                        <select id="settingsPollingInterval" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;" onchange="updatePollingSettings()">
+                            <option value="10000">Every 10s</option>
+                            <option value="30000" selected>Every 30s</option>
+                            <option value="60000">Every 60s</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px;">QR Code Generator Helper</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px;">Generate link URLs that automatically bind customer tables to scanned orders.</p>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="qrTableNum" value="1" min="1" max="99" style="width: 80px; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); outline: none;">
+                            <input type="text" id="qrGeneratedUrl" readonly style="flex-grow: 1; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background-color: #fafafa; font-size: 0.8rem; outline: none;">
+                            <button class="btn-primary" onclick="copyGeneratedQrLink()">Copy URL</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 4. Order Details View Modal overlay -->
+    <div id="orderDetailsModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">Order Details</h3>
+                <button class="close-btn" onclick="closeOrderModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalOrderDetailsBody">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" style="background-color: var(--warning); color: #fff; border: none; display: flex; align-items: center; gap: 6px;" onclick="printActiveOrderInvoice()">
+                    <ion-icon name="print-outline"></ion-icon> Print Receipt
+                </button>
+                <button class="btn-secondary" onclick="closeOrderModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Food Add/Edit Form Modal overlay -->
+    <div id="foodFormModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title" id="foodModalTitle">Add Menu Item</h3>
+                <button class="close-btn" onclick="closeFoodModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="foodForm" onsubmit="handleFoodFormSubmit(event)">
+                    <input type="hidden" id="editFoodId">
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label class="stat-label" style="display: block; margin-bottom: 6px;">Food Name</label>
+                        <input type="text" id="foodName" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;" required>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label class="stat-label" style="display: block; margin-bottom: 6px;">Description</label>
+                        <textarea id="foodDesc" style="width: 100%; height: 60px; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); outline: none; resize: none;" required></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label class="stat-label" style="display: block; margin-bottom: 6px;">Price (₹)</label>
+                            <input type="number" id="foodPrice" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;" required>
+                        </div>
+                        <div>
+                            <label class="stat-label" style="display: block; margin-bottom: 6px;">Category</label>
+                            <select id="foodCategorySelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;" required>
+                                <!-- Categories populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label class="stat-label" style="display: block; margin-bottom: 6px;">Image URL</label>
+                        <input type="text" id="foodImageUrl" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;" placeholder="Paste an Unsplash or image URL">
+                    </div>
+
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; background-color: var(--bg-light); padding: 15px; border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 500;">
+                            <input type="checkbox" id="foodCheckSpecial"> Chef's Special
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 500;">
+                            <input type="checkbox" id="foodCheckPopular"> Popular
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 500;">
+                            <input type="checkbox" id="foodCheckRecommended"> Recommended
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; margin-top: 20px; justify-content: center;">
+                        Save Menu Item
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Hidden receipt printing layout -->
+    <div id="receiptPrintContainer"></div>
+
+    <!-- Scripts configuration and dashboard logic -->
+    <script src="config.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
